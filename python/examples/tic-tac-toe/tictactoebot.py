@@ -22,7 +22,7 @@ class TicTacToeBot(Bot):
     log = logging.getLogger('tictactoebot')
 
     def __init__(self):
-        Bot.__init__(self, server='localhost', port=8000, game_name='default', num_players=2, player_id='1')
+        Bot.__init__(self, server='localhost', port=8000, game_name='tic-tac-toe', game_id='multi', num_players=2, player_id='1')
 
     # Called when it is this bot's turn to play.
     def think(self, G, ctx):
