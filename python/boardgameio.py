@@ -24,9 +24,11 @@ class Namespace(io.BaseNamespace):
         self.bot = bot
     
     def on_connect(self):
-        self.log.info('connected') # to game <%s>' % self.bot.game_id)
+        self.log.info('connected')
+
     def on_disconnect(self):
         self.log.info('disconnected')
+
     def on_reconnect(self):
         self.log.info('reconnected')
     
@@ -36,10 +38,9 @@ class Namespace(io.BaseNamespace):
         state_id = state['_stateID']
         ctx = state['ctx']
 
-        # is it my game and my turn to play?
+        # Is it my game and my turn to play?
         if game_id == self.bot.game_id:
             if not self.previous_state_id or state_id>=self.previous_state_id:
-
                 self.previous_state_id = state_id
                 self.log.debug('state = %s' % str(state))
                 G = state['G']
@@ -50,6 +51,7 @@ class Namespace(io.BaseNamespace):
                     
                 elif self.bot.player_id in ctx['actionPlayers']:
                     self.log.info('phase is %s' % (ctx['phase']))
+
                     if not self.actions:
                         # plan next actions
                         self.actions = self.bot.think(G, ctx)

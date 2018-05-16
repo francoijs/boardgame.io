@@ -23,7 +23,7 @@ class TicTacToeBot(Bot):
 
     def __init__(self):
         Bot.__init__(self, server='localhost', port=8000, game_name='default', num_players=2, player_id='1')
-    
+
     # Called when it is this bot's turn to play.
     def think(self, G, ctx):
         cells = G['cells']
@@ -51,14 +51,14 @@ def main(argv=sys.argv):
     global running
     running = True
     while running:
-        client.listen()
+      client.listen()
     log.info('stopped.')
 
 def stop(signum, frame):
     log.info('stopping...')
     global running
     running = False
-    
+
 # start process
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, stop)
