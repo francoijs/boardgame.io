@@ -481,24 +481,28 @@ test('canMakeMove', () => {
   expect(state.G).not.toMatchObject({ B: true });
 });
 
-test('canMakeMove', () => {
+test('canPlayerMakeMove', () => {
   // default behaviour
-  const pid = { playerID: 0 };
+  const pid = 0;
 
   let flow = Flow({});
-  expect(flow.canMakeMove({}, {}, pid)).toBe(false);
+  expect(flow.canPlayerMakeMove({}, {}, pid)).toBe(false);
   // NOTE: currentPlayer is not allowed to make a move by default.
   // his playerID must be included in the actionPlayers array.
-  expect(flow.canMakeMove({}, { currentPlayer: 0 }, pid)).toBe(false);
-  expect(flow.canMakeMove({}, { actionPlayers: ['any'] }, pid)).toBe(true);
-  expect(flow.canMakeMove({}, { actionPlayers: [0] }, pid)).toBe(true);
-  expect(flow.canMakeMove({}, { actionPlayers: [1, 2, 3] }, pid)).toBe(false);
+  expect(flow.canPlayerMakeMove({}, { currentPlayer: 0 }, pid)).toBe(false);
+  expect(flow.canPlayerMakeMove({}, { actionPlayers: ['any'] }, pid)).toBe(
+    true
+  );
+  expect(flow.canPlayerMakeMove({}, { actionPlayers: [0] }, pid)).toBe(true);
+  expect(flow.canPlayerMakeMove({}, { actionPlayers: [1, 2, 3] }, pid)).toBe(
+    false
+  );
 
   // no one can make a move
-  flow = Flow({ canMakeMove: () => false });
-  expect(flow.canMakeMove({}, {}, pid)).toBe(false);
-  expect(flow.canMakeMove({}, { currentPlayer: 0 }, pid)).toBe(false);
-  expect(flow.canMakeMove({}, {}, 'any')).toBe(false);
+  flow = Flow({ canPlayerMakeMove: () => false });
+  expect(flow.canPlayerMakeMove({}, {}, pid)).toBe(false);
+  expect(flow.canPlayerMakeMove({}, { currentPlayer: 0 }, pid)).toBe(false);
+  expect(flow.canPlayerMakeMove({}, {}, 'any')).toBe(false);
 });
 
 test('endGame', () => {
@@ -595,7 +599,7 @@ test('resetGame', () => {
 });
 
 test('change action players', () => {
-  const flow = FlowWithPhases({});
+  const flow = FlowWithPhases({ changeActionPlayers: true });
   const state = { ctx: {} };
   const newState = flow.processGameEvent(state, {
     type: 'changeActionPlayers',
@@ -606,6 +610,8 @@ test('change action players', () => {
 
 test('change action players - reducer', () => {
   let game = Game({
+    flow: { changeActionPlayers: true },
+
     moves: {
       playMilitia: (G, ctx) => {
         // change which players need to act

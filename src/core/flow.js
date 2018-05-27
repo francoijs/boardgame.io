@@ -11,36 +11,6 @@ import { Random } from './random';
 import { Events } from './events';
 
 /**
- * This function checks whether a player is allowed to make a move.
- *
- * @param {object} G     - The Game instance
- * @param {object} ctx   - The ctx instance
- * @param {object} opts  - Options - used here to transport the playerID.
- */
-function canPlayerMakeMove(G, ctx, opts) {
-  const { playerID } = opts || {};
-
-  // In multiplayer mode, the default playerID is null, which corresponds
-  // to a spectator that can't make moves.
-  if (playerID === null) {
-    return false;
-  }
-
-  // In singleplayer mode (and most unit tests), the default playerID
-  // is undefined, and can always make moves.
-  if (playerID === undefined) {
-    return true;
-  }
-
-  const actionPlayers = ctx.actionPlayers || [];
-
-  // Explicitly do not allow the current player
-  // When he is allowed to make a move, his playerID
-  // must be included in actionPlayers.
-  return actionPlayers.includes(playerID) || actionPlayers.includes('any');
-}
-
-/**
  * Helper to create a reducer that manages ctx (with the
  * ability to also update G).
  *
@@ -64,11 +34,10 @@ function canPlayerMakeMove(G, ctx, opts) {
  *                                       the client while waiting for
  *                                       the result of execution from
  *                                       the server.
- * @param {...object} canMakeMove - (G, ctx, {type, playerID, args}) => boolean
+ * @param {...object} canMakeMove - (G, ctx, moveName) => boolean
  *                                  Predicate to determine whether a
- *                                  particular move is playable at
- *                                  this time for a given set of args
- *                                  and playerID.
+ *                                  particular move is allowed at
+ *                                  this time.
  *
  * @param {...object} canUndoMove - (G, ctx, moveName) => boolean
  *                                  Predicate to determine whether a
@@ -124,15 +93,23 @@ export function Flow({
 
     optimisticUpdate,
 
-    canPlayerMakeMove,
+    canPlayerMakeMove: (G, ctx, playerID) => {
+      // In multiplayer mode, the default playerID is null, which corresponds
+      // to a spectator that can't make moves.
+      if (playerID === null) return false;
+      // In singleplayer mode (and most unit tests), the default playerID
+      // is undefined, and can always make moves.
+      if (playerID === undefined) return true;
+      // playerID must be in actionPlayers.
+      const actionPlayers = ctx.actionPlayers || [];
+      return actionPlayers.includes(playerID) || actionPlayers.includes('any');
+    },
 
-    canMakeMove: (G, ctx, opts) => {
+    canMakeMove: (G, ctx, moveName) => {
       // Disallow moves once the game is over.
       if (ctx.gameover !== undefined) return false;
-      // Disallow moves if the current player cannot play.
-      if (!canPlayerMakeMove(G, ctx, opts)) return false;
       // User-provided move validation.
-      return canMakeMove(G, ctx, opts);
+      return canMakeMove(G, ctx, moveName);
     },
   };
 }
@@ -180,6 +157,8 @@ export function Flow({
  * @param {...object} endPhase - Set to false to disable the `endPhase` event.
  *
  * @param {...object} endGame - Set to true to enable the `endGame` event.
+ *
+ * @param {...object} changeActionPlayers - Set to true to enable the `changeActionPlayers` event.
  *
  * @param {...object} allowedMoves - List of moves that are allowed.
  *                                   This can be either a list of
@@ -264,6 +243,7 @@ export function FlowWithPhases({
   endTurn,
   endPhase,
   endGame,
+  changeActionPlayers,
   undoableMoves,
   allowedMoves,
   optimisticUpdate,
@@ -277,6 +257,9 @@ export function FlowWithPhases({
   }
   if (endGame === undefined) {
     endGame = false;
+  }
+  if (changeActionPlayers === undefined) {
+    changeActionPlayers = false;
   }
   if (optimisticUpdate === undefined) {
     optimisticUpdate = () => true;
@@ -537,6 +520,13 @@ export function FlowWithPhases({
     return { ...state, ctx: { ...state.ctx, gameover: arg } };
   }
 
+  function changeActionPlayersEvent(state, actionPlayers) {
+    if (actionPlayers && actionPlayers.length) {
+      return { ...state, ctx: { ...state.ctx, actionPlayers } };
+    }
+    return state;
+  }
+
   function processMove(state, action, dispatch) {
     const conf = phaseMap[state.ctx.phase];
 
@@ -601,11 +591,11 @@ export function FlowWithPhases({
     return state;
   }
 
-  const canMakeMove = (G, ctx, opts) => {
+  const canMakeMove = (G, ctx, moveName) => {
     const conf = phaseMap[ctx.phase];
     const moves = conf.allowedMoves(G, ctx);
     if (!moves) return true;
-    return moves.includes(opts.type);
+    return moves.includes(moveName);
   };
 
   const canUndoMove = (G, ctx, moveName) => {
@@ -615,13 +605,18 @@ export function FlowWithPhases({
   };
 
   let enabledEvents = {};
-  if (endTurn) enabledEvents['endTurn'] = endTurnEvent;
-  if (endPhase) enabledEvents['endPhase'] = endPhaseEvent;
-  if (endGame) enabledEvents['endGame'] = endGameEvent;
-
-  enabledEvents['changeActionPlayers'] = (state, actionPlayers) => {
-    return { ...state, ctx: { ...state.ctx, actionPlayers } };
-  };
+  if (endTurn) {
+    enabledEvents['endTurn'] = endTurnEvent;
+  }
+  if (endPhase) {
+    enabledEvents['endPhase'] = endPhaseEvent;
+  }
+  if (endGame) {
+    enabledEvents['endGame'] = endGameEvent;
+  }
+  if (changeActionPlayers) {
+    enabledEvents['changeActionPlayers'] = changeActionPlayersEvent;
+  }
 
   return Flow({
     ctx: numPlayers => ({
