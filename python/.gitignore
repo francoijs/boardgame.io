@@ -2,3 +2,5 @@
 .cache
 .coverage
 htmlcov
+TicTacToe.py
+bundle-tic-tac-toe.js
