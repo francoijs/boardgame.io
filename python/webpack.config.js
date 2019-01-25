@@ -9,7 +9,7 @@
 const path = require('path');
 
 module.exports = {
-  entry: ['babel-polyfill', path.resolve(__dirname, 'game-tic-tac-toe.js')],
+  entry: ['babel-polyfill', path.resolve(__dirname, 'game-gymenv.js')],
 
   output: {
     publicPath: '/',
@@ -25,7 +25,7 @@ module.exports = {
         exclude: /node_modules/,
         loader: 'babel-loader',
         query: {
-          presets: ['es2015'],
+          presets: ['@babel/preset-env', '@babel/react'],
           plugins: [
             [
               'module-resolver',
@@ -35,8 +35,6 @@ module.exports = {
                 },
               },
             ],
-            'transform-object-rest-spread',
-            'transform-class-properties',
           ],
         },
       },
