@@ -14,19 +14,25 @@ TicTacToe.action_space = [0, 8];
 TicTacToe.observation_space = [...new Array(9)].map(() => [0, 2]);
 
 /* FIXME: shall be based on state as returned by Game.playerView('0') */
-TicTacToe.observation = G => {
+TicTacToe.observationImpl = G => {
   return G.cells.map(c => {
     if (c === null) return 0;
     return parseInt(c) + 1;
   });
 };
 
-TicTacToe.action = (action, playerID) => {
-  return {
-    type: 'clickCell',
-    playerID: playerID,
-    args: [action],
-  };
+TicTacToe.enumerate = G => {
+  let r = [];
+  for (let i = 0; i < 9; i++) {
+    if (G.cells[i] === null) {
+      r.push(i);
+    }
+  }
+  return r;
+};
+
+TicTacToe.observation = G => {
+  return TicTacToe.observationImpl(TicTacToe.playerView(G));
 };
 
 TicTacToe.step = (G, ctx, action, playerID) => {

@@ -12,6 +12,7 @@ GymEnv interface.
 """
 
 import os
+import random
 import numpy as np
 import js2py
 import gym
@@ -20,7 +21,7 @@ from gym import spaces
 
 class GymEnv(gym.Env):
     """
-    Provide a OpenAI's gym environment around a JS 'Game' object.
+    Provide an OpenAI Gym environment around a Boardgame.io 'Game' object.
     """
 
     @staticmethod
@@ -42,9 +43,9 @@ class GymEnv(gym.Env):
         self._ctx = self._game.flow.ctx(2)
         self._G = self._game.setup()
 
-    def _default_opponent_policy(self, _G):
+    def _default_opponent_policy(self, G):
         # policy of opponent (default=random)
-        return self.action_space.sample()
+        return random.choice(self._game.enumerate(G))
 
     def set_opponent_policy(self, pol):
         """ Set policy of player '1'. """

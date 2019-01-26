@@ -52,7 +52,6 @@ class TestGymEnv(unittest.TestCase):
         self.assertEqual(reward, 0.)
         self.assertEqual(done, False)
 
-
     _action = 1
     @staticmethod
     def make_policy():
@@ -79,3 +78,19 @@ class TestGymEnv(unittest.TestCase):
         np.testing.assert_array_equal(state, [1, 2, 0, 1, 2, 1, 0, 2, 0])
         self.assertEqual(reward, -1)
         self.assertEqual(done, True)
+
+    def test_step_shall_select_only_allowed_moves_for_opponent(self):
+        # default opponent policy = random
+        turns = action = 0
+        done = False
+        while not done:
+            state, _, done, _ = self.sut.step(action)
+            turns += 2 - done
+            self.assertEqual(state[action], 1)
+            # check that opponent has played a free cell
+            self.assertEqual(sum([(p > 0) for p in state]), turns, state)
+            for p in range(9):
+                if state[p] == 0:
+                    action = p
+                    break
+        self.assertGreater(turns, 4)
