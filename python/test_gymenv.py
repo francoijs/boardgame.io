@@ -42,13 +42,20 @@ class TestGymEnv(unittest.TestCase):
 
     def test_reset_shall_return_initial_observation(self):
         np.testing.assert_array_equal(self.sut.reset(), [0]*9)
+    
+    def test_reset_shall_reset_internal_state(self):
+        self.sut.step(0)
+        self.sut.step(3)
+        np.testing.assert_array_equal(self.sut.reset(), [0]*9)
 
     # step
 
     def test_step_shall_return_new_observation_and_reward(self):
         self.sut.set_opponent_policy(lambda G: 8)
         state, reward, done, _ = self.sut.step(0)
-        np.testing.assert_array_equal(state, [1]+[0]*7+[2])
+        np.testing.assert_array_equal(state, [1, 0, 0,
+                                              0, 0, 0,
+                                              0, 0, 2])
         self.assertEqual(reward, 0.)
         self.assertEqual(done, False)
 
@@ -63,34 +70,26 @@ class TestGymEnv(unittest.TestCase):
 
     def test_step_shall_set_reward_and_done_if_episode_has_ended(self):
         self.sut.set_opponent_policy(TestGymEnv.make_policy())
-        self.sut.step(0)
-        self.sut.step(3)
+        _, reward, done, _ = self.sut.step(0)
+        self.assertEqual(reward, 0.)
+        self.assertEqual(done, False)
+        _, reward, done, _ = self.sut.step(3)
+        self.assertEqual(reward, 0.)
+        self.assertEqual(done, False)
         state, reward, done, _ = self.sut.step(6)
-        np.testing.assert_array_equal(state, [1, 2, 0, 1, 2, 0, 1, 0, 0])
+        np.testing.assert_array_equal(state, [1, 2, 0,
+                                              1, 2, 0,
+                                              1, 0, 0])
         self.assertEqual(reward, 1)
         self.assertEqual(done, True)
 
-    def test_step_shall_return_reward_minus_1_if_game_was_lost(self):
+    def test_step_shall_return_negative_reward_if_game_was_lost(self):
         self.sut.set_opponent_policy(TestGymEnv.make_policy())
         self.sut.step(0)
         self.sut.step(3)
         state, reward, done, _ = self.sut.step(5)
-        np.testing.assert_array_equal(state, [1, 2, 0, 1, 2, 1, 0, 2, 0])
+        np.testing.assert_array_equal(state, [1, 2, 0,
+                                              1, 2, 1,
+                                              0, 2, 0])
         self.assertEqual(reward, -1)
         self.assertEqual(done, True)
-
-    def test_step_shall_select_only_allowed_moves_for_opponent(self):
-        # default opponent policy = random
-        turns = action = 0
-        done = False
-        while not done:
-            state, _, done, _ = self.sut.step(action)
-            turns += 2 - done
-            self.assertEqual(state[action], 1)
-            # check that opponent has played a free cell
-            self.assertEqual(sum([(p > 0) for p in state]), turns, state)
-            for p in range(9):
-                if state[p] == 0:
-                    action = p
-                    break
-        self.assertGreater(turns, 4)

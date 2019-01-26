@@ -12,6 +12,7 @@ GymEnv interface.
 """
 
 import os
+import time
 import random
 import numpy as np
 import js2py
@@ -40,15 +41,23 @@ class GymEnv(gym.Env):
         self._game = module.var.get(cname).get('default').to_python()
         self.set_opponent_policy(self._default_opponent_policy)
         # game context
-        self._ctx = self._game.flow.ctx(2)
-        self._G = self._game.setup()
+        self._ctx = self._G = None
+        self.reset()
+        # stats
+        self._counters = (0, 0)
+
+    def __del__(self):
+        if not self._counters[0]:
+            tps = 0
+        else:
+            tps = self._counters[1] / self._counters[0]
+        print 'avg time per step: %.3fs' % (tps)
 
     def _default_opponent_policy(self, G):
-        # policy of opponent (default=random)
         return random.choice(self._game.enumerate(G))
 
     def set_opponent_policy(self, pol):
-        """ Set policy of player '1'. """
+        """ Set policy of player '1' (default=random). """
         self._think = pol
 
     @property
@@ -86,11 +95,13 @@ class GymEnv(gym.Env):
 
     def reset(self):
         """ Reset environment to initial state. """
+        self._ctx = self._game.flow.ctx(2)
         self._G = self._game.setup()
         return self._game.observation(self._G).to_list()
 
     def step(self, action):
         """ Perform step. """
+        time0 = time.time()
         state = self._game.step(self._G, self._ctx, action, '0')
         if not state.ctx.gameover:
             # play opponent
@@ -104,4 +115,8 @@ class GymEnv(gym.Env):
         else:
             done = False
             reward = 0
-        return self._game.observation(self._G).to_list(), reward, done, 'nada'
+        obs = self._game.observation(self._G).to_list()
+        # update stats
+        c = self._counters
+        self._counters = (c[0] + 1, c[1] + time.time() - time0)
+        return obs, reward, done, dict()

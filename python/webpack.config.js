@@ -9,7 +9,7 @@
 const path = require('path');
 
 module.exports = {
-  entry: ['babel-polyfill', path.resolve(__dirname, 'game-gymenv.js')],
+  entry: ['babel-polyfill', path.resolve(__dirname, 'tic-tac-toe.js')],
 
   output: {
     publicPath: '/',
