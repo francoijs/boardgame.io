@@ -1,2 +1,2 @@
-from gymenv import GymEnv
-from bot import Bot
+from .gymenv import GymEnv
+from .bot import Bot

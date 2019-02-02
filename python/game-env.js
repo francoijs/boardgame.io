@@ -31,6 +31,8 @@ export function GameEnv({
   make_action,
   make_observation,
 }) {
+  /* patch that prevents 'moveNames' to be seen empty when using js2py+python3 */
+  game.moveNames = Object.keys(game.moves);
   const reducer = CreateGameReducer({ game, numPlayers: 2 });
   return Object.assign(
     {

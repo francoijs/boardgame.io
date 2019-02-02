@@ -59,17 +59,17 @@ class TestGymEnv(unittest.TestCase):
         self.assertEqual(reward, 0.)
         self.assertEqual(done, False)
 
-    _action = 1
     @staticmethod
-    def make_policy():
-        TestGymEnv._action = -2
+    def make_policy(actions):
+        _idx = -1
         def policy(_G):
-            TestGymEnv._action += 3
-            return TestGymEnv._action
+            nonlocal _idx
+            _idx += 1
+            return actions[_idx]
         return policy
 
     def test_step_shall_set_reward_and_done_if_episode_has_ended(self):
-        self.sut.set_opponent_policy(TestGymEnv.make_policy())
+        self.sut.set_opponent_policy(TestGymEnv.make_policy([1,4]))
         _, reward, done, _ = self.sut.step(0)
         self.assertEqual(reward, 0.)
         self.assertEqual(done, False)
@@ -84,12 +84,25 @@ class TestGymEnv(unittest.TestCase):
         self.assertEqual(done, True)
 
     def test_step_shall_return_negative_reward_if_game_was_lost(self):
-        self.sut.set_opponent_policy(TestGymEnv.make_policy())
+        self.sut.set_opponent_policy(TestGymEnv.make_policy([1,4,7]))
         self.sut.step(0)
         self.sut.step(3)
         state, reward, done, _ = self.sut.step(5)
         np.testing.assert_array_equal(state, [1, 2, 0,
                                               1, 2, 1,
                                               0, 2, 0])
+        self.assertEqual(reward, -1)
+        self.assertEqual(done, True)
+
+    def test_step_shall_return_negative_reward_if_game_was_draw(self):
+        self.sut.set_opponent_policy(TestGymEnv.make_policy([1,4,6,8]))
+        self.sut.step(0)
+        self.sut.step(2)
+        self.sut.step(3)
+        self.sut.step(5)
+        state, reward, done, _ = self.sut.step(7)
+        np.testing.assert_array_equal(state, [1, 2, 1,
+                                              1, 2, 1,
+                                              2, 1, 2])
         self.assertEqual(reward, -1)
         self.assertEqual(done, True)

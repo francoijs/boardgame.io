@@ -37,7 +37,7 @@ class GymEnv(gym.Env):
         cname = cname or fname
         if not os.path.isfile(cname+'.py') or os.path.getmtime(cname+'.py') < os.path.getmtime(fname+'.js'):
             js2py.translate_file(fname+'.js', cname+'.py')
-        module = __import__(cname, globals(), locals(), [None], -1)
+        module = __import__(cname, globals(), locals(), [None])
         self._game = module.var.get(cname).get('default').to_python()
         self.set_opponent_policy(self._default_opponent_policy)
         # game context
@@ -45,19 +45,21 @@ class GymEnv(gym.Env):
         self.reset()
         # stats
         self._counters = (0, 0)
+        # default policy = random
+        self._think = self._default_opponent_policy
 
     def __del__(self):
         if not self._counters[0]:
             tps = 0
         else:
             tps = self._counters[1] / self._counters[0]
-        print 'avg time per step: %.3fs' % (tps)
+        print('avg time per step: %.3fs' % (tps))
 
     def _default_opponent_policy(self, G):
         return random.choice(self._game.enumerate(G))
 
     def set_opponent_policy(self, pol):
-        """ Set policy of player '1' (default=random). """
+        """ Set policy of player '1'. """
         self._think = pol
 
     @property
@@ -90,14 +92,15 @@ class GymEnv(gym.Env):
         space = self._game.observation_space.to_list()
         return spaces.Box(
             np.amin(space, axis=1),
-            np.amax(space, axis=1)
+            np.amax(space, axis=1),
+            dtype=np.float32
         )
 
     def reset(self):
         """ Reset environment to initial state. """
         self._ctx = self._game.flow.ctx(2)
         self._G = self._game.setup()
-        return self._game.observation(self._G).to_list()
+        return np.asarray(self._game.observation(self._G).to_list())
 
     def step(self, action):
         """ Perform step. """
@@ -115,7 +118,7 @@ class GymEnv(gym.Env):
         else:
             done = False
             reward = 0
-        obs = self._game.observation(self._G).to_list()
+        obs = np.asarray(self._game.observation(self._G).to_list())
         # update stats
         c = self._counters
         self._counters = (c[0] + 1, c[1] + time.time() - time0)
