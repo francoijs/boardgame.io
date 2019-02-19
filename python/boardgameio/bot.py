@@ -25,7 +25,7 @@ class Namespace(io.BaseNamespace):
     SocketIO namespace providing handlers for events
     of the connection with the boardgame.io server.
     """
-    log = logging.getLogger('client.namespace')
+    log = logging.getLogger('boardgameio.namespace')
 
     def __init__(self, *args):
         io.BaseNamespace.__init__(self, *args)
@@ -95,7 +95,7 @@ class Bot(object):
     """
     Base class for boardgame.io bot.
     """
-    log = logging.getLogger('client.bot')
+    log = logging.getLogger('boardgameio.bot')
 
     def __init__(self, server='localhost', port='8000',
                  options=None):

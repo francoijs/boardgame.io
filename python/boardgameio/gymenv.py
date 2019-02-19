@@ -14,6 +14,7 @@ GymEnv interface.
 import os
 import time
 import random
+import logging
 import numpy as np
 import js2py
 import gym
@@ -24,6 +25,7 @@ class GymEnv(gym.Env):
     """
     Provide an OpenAI Gym environment around a Boardgame.io 'Game' object.
     """
+    log = logging.getLogger('boardgameio.gymenv')
 
     @staticmethod
     def make(fname, cname=None):
@@ -53,7 +55,7 @@ class GymEnv(gym.Env):
             tps = 0
         else:
             tps = self._counters[1] / self._counters[0]
-        print('avg time per step: %.3fs' % (tps))
+        self.log.debug('avg time per step: %.3fs' % (tps))
 
     def _default_opponent_policy(self, G):
         return random.choice(self._game.enumerate(G))
@@ -84,17 +86,16 @@ class GymEnv(gym.Env):
     @property
     def observation_dim(self):
         """ Number of dimensions of observation-space. """
-        return self.observation_space.low.shape[0]
+        dims = self._game.observation_space.to_list()
+        assert len(dims) == 2
+        return dims[0]
 
     @property
     def observation_space(self):
         """ Boundaries of observation-space. """
-        space = self._game.observation_space.to_list()
-        return spaces.Box(
-            np.amin(space, axis=1),
-            np.amax(space, axis=1),
-            dtype=np.float32
-        )
+        dims = self._game.observation_space.to_list()
+        assert len(dims) == 2
+        return spaces.Box(low=0, high=dims[1]-1, shape=(dims[0],), dtype=int)
 
     def reset(self):
         """ Reset environment to initial state. """
@@ -105,21 +106,32 @@ class GymEnv(gym.Env):
     def step(self, action):
         """ Perform step. """
         time0 = time.time()
-        state = self._game.step(self._G, self._ctx, action, '0')
-        if not state.ctx.gameover:
-            # play opponent
-            action = self._think(state.G)
-            state = self._game.step(state.G, state.ctx, action, '1')
-        self._G = state.G
-        self._ctx = state.ctx
-        if state.ctx.gameover:
-            done = True
-            reward = 1 if state.ctx.gameover.winner == '0' else -1
-        else:
-            done = False
-            reward = 0
-        obs = np.asarray(self._game.observation(self._G).to_list())
+        done = False
+        reward = 0
+        
+        try:
+            if action in self._game.enumerate(self._G):
+                state = self._game.step(self._G, self._ctx, action, '0')
+                if not state.ctx.gameover:
+                    # play opponent
+                    action = self._think(state.G)
+                    state = self._game.step(state.G, state.ctx, action, '1')
+                self._G = state.G
+                self._ctx = state.ctx
+                if state.ctx.gameover:
+                    done = True
+                    reward = 1 if state.ctx.gameover.winner == '0' else -1
+            else:
+                self.log.warning('action not possible in current state: %d', action)
+            obs = np.asarray(self._game.observation(self._G).to_list())
+        except Exception as e:
+            self.log.error("""internal exception in JS Game object:
+            G=%s
+            action=%s
+            ctx=%s""", self._G, action, self._ctx)
+            raise e
+        
         # update stats
         c = self._counters
         self._counters = (c[0] + 1, c[1] + time.time() - time0)
-        return obs, reward, done, dict()
+        return obs, float(reward), done, dict()

@@ -19,8 +19,7 @@ import mock
 import socketIO_client_nexus as io
 from boardgameio import Namespace, Bot
 
-
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.ERROR)
 
 
 class TestNamespace(unittest.TestCase):

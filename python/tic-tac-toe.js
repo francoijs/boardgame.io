@@ -12,7 +12,7 @@ import { default as GTicTacToe } from './game';
 const TicTacToe = GameEnv({
   game: GTicTacToe,
   action_space: [0, 8],
-  observation_space: [...new Array(9)].map(() => [0, 2]),
+  observation_space: [9, 3],
 
   enumerate: G => {
     let r = [];

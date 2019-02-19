@@ -8,8 +8,11 @@
 # pylint: disable=invalid-name,import-error,no-self-use,missing-docstring
 
 import unittest
+import logging
 import numpy as np
 from boardgameio import GymEnv
+
+logging.basicConfig(level=logging.ERROR)
 
 
 class TestGymEnv(unittest.TestCase):
@@ -33,20 +36,24 @@ class TestGymEnv(unittest.TestCase):
 
     def test_observation_dim_shall_return_num_of_dimensions_of_observation_space(self):
         self.assertEqual(self.sut.observation_dim, 9)
-
+ 
     def test_observation_space_shall_return_observation_space_boundaries(self):
-        np.testing.assert_array_equal(self.sut.observation_space.low, [0]*9)
-        np.testing.assert_array_equal(self.sut.observation_space.high, [2]*9)
+        np.testing.assert_array_equal(self.sut.observation_space.low, 0)
+        np.testing.assert_array_equal(self.sut.observation_space.high, 2)
 
     # reset
 
     def test_reset_shall_return_initial_observation(self):
-        np.testing.assert_array_equal(self.sut.reset(), [0]*9)
+        np.testing.assert_array_equal(self.sut.reset(), [0, 0, 0,
+                                                         0, 0, 0,
+                                                         0, 0, 0])
     
     def test_reset_shall_reset_internal_state(self):
         self.sut.step(0)
         self.sut.step(3)
-        np.testing.assert_array_equal(self.sut.reset(), [0]*9)
+        np.testing.assert_array_equal(self.sut.reset(), [0, 0, 0,
+                                                         0, 0, 0,
+                                                         0, 0, 0])
 
     # step
 
@@ -57,6 +64,13 @@ class TestGymEnv(unittest.TestCase):
                                               0, 0, 0,
                                               0, 0, 2])
         self.assertEqual(reward, 0.)
+        self.assertEqual(done, False)
+    
+    def test_step_shall_return_last_observation_if_action_is_not_possible(self):
+        state1, _, _, _ = self.sut.step(0)
+        state2, reward, done, _ = self.sut.step(0)
+        np.testing.assert_array_equal(state1, state2)
+        self.assertEqual(reward, 0)
         self.assertEqual(done, False)
 
     @staticmethod
@@ -72,15 +86,18 @@ class TestGymEnv(unittest.TestCase):
         self.sut.set_opponent_policy(TestGymEnv.make_policy([1,4]))
         _, reward, done, _ = self.sut.step(0)
         self.assertEqual(reward, 0.)
+        self.assertEqual(type(reward), float)
         self.assertEqual(done, False)
         _, reward, done, _ = self.sut.step(3)
         self.assertEqual(reward, 0.)
+        self.assertEqual(type(reward), float)
         self.assertEqual(done, False)
         state, reward, done, _ = self.sut.step(6)
         np.testing.assert_array_equal(state, [1, 2, 0,
                                               1, 2, 0,
                                               1, 0, 0])
-        self.assertEqual(reward, 1)
+        self.assertEqual(reward, 1.)
+        self.assertEqual(type(reward), float)
         self.assertEqual(done, True)
 
     def test_step_shall_return_negative_reward_if_game_was_lost(self):
@@ -92,6 +109,7 @@ class TestGymEnv(unittest.TestCase):
                                               1, 2, 1,
                                               0, 2, 0])
         self.assertEqual(reward, -1)
+        self.assertEqual(type(reward), float)
         self.assertEqual(done, True)
 
     def test_step_shall_return_negative_reward_if_game_was_draw(self):
@@ -105,4 +123,5 @@ class TestGymEnv(unittest.TestCase):
                                               1, 2, 1,
                                               2, 1, 2])
         self.assertEqual(reward, -1)
+        self.assertEqual(type(reward), float)
         self.assertEqual(done, True)
