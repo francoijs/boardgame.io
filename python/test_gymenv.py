@@ -66,12 +66,12 @@ class TestGymEnv(unittest.TestCase):
         self.assertEqual(reward, 0.)
         self.assertEqual(done, False)
     
-    def test_step_shall_return_last_observation_if_action_is_not_possible(self):
+    def test_step_shall_return_negative_reward_if_action_is_not_possible(self):
         state1, _, _, _ = self.sut.step(0)
         state2, reward, done, _ = self.sut.step(0)
         np.testing.assert_array_equal(state1, state2)
-        self.assertEqual(reward, 0)
-        self.assertEqual(done, False)
+        self.assertEqual(reward, -1)
+        self.assertEqual(done, True)
 
     @staticmethod
     def make_policy(actions):
@@ -125,3 +125,8 @@ class TestGymEnv(unittest.TestCase):
         self.assertEqual(reward, -1)
         self.assertEqual(type(reward), float)
         self.assertEqual(done, True)
+
+    # nonreg
+
+    def test_step_shall_accept_numpy_types(self):
+        self.sut.step(np.int64(1))

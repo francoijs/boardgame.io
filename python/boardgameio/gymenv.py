@@ -55,7 +55,7 @@ class GymEnv(gym.Env):
             tps = 0
         else:
             tps = self._counters[1] / self._counters[0]
-        self.log.debug('avg time per step: %.3fs' % (tps))
+        self.log.debug('avg time per step: %.3fs', tps)
 
     def _default_opponent_policy(self, G):
         return random.choice(self._game.enumerate(G))
@@ -108,7 +108,10 @@ class GymEnv(gym.Env):
         time0 = time.time()
         done = False
         reward = 0
-        
+
+        # fix numpy types (fail with js2py)
+        if type(action).__module__ == np.__name__:
+            action = action.item()
         try:
             if action in self._game.enumerate(self._G):
                 state = self._game.step(self._G, self._ctx, action, '0')
@@ -123,6 +126,8 @@ class GymEnv(gym.Env):
                     reward = 1 if state.ctx.gameover.winner == '0' else -1
             else:
                 self.log.warning('action not possible in current state: %d', action)
+                done = True
+                reward = -1
             obs = np.asarray(self._game.observation(self._G).to_list())
         except Exception as e:
             self.log.error("""internal exception in JS Game object:
@@ -130,7 +135,7 @@ class GymEnv(gym.Env):
             action=%s
             ctx=%s""", self._G, action, self._ctx)
             raise e
-        
+
         # update stats
         c = self._counters
         self._counters = (c[0] + 1, c[1] + time.time() - time0)
