@@ -125,7 +125,7 @@ class GymEnv(gym.Env):
                     done = True
                     reward = 1 if state.ctx.gameover.winner == '0' else -1
             else:
-                self.log.warning('action not possible in current state: %d', action)
+                self.log.debug('action not possible in current state: %d', action)
                 done = True
                 reward = -1
             obs = np.asarray(self._game.observation(self._G).to_list())
