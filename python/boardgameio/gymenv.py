@@ -7,10 +7,7 @@
 #
 # pylint: disable=invalid-name,import-error,no-self-use
 
-"""
-GymEnv interface.
-"""
-
+from collections import namedtuple
 import os
 import time
 import random
@@ -23,32 +20,29 @@ from gym import spaces
 
 class GymEnv(gym.Env):
     """
-    Provide an OpenAI Gym environment around a Boardgame.io 'Game' object.
+    Base class for OpenAI Gym environment.
     """
-    log = logging.getLogger('boardgameio.gymenv')
 
     @staticmethod
     def make(fname, cname=None):
         """
-        Return a GymEnv running an instance of Game object {cname} defined in JS file '{fname}.js'.
-        By default, cname = fname.
+        Return a GymEnv running an instance of Game object {cname} defined in {fname}
+        - a ES6 file (extension .js)
+        - or a Python3 file (extension .py)
+        By default, cname = fname without the extension.
         """
-        return GymEnv(fname, cname)
+        if fname.endswith('.js'):
+            return GymEnvJs(fname[:-3], cname)
+        elif fname.endswith('.py'):
+            return GymEnvPy(fname[:-3], cname)
+        return gym.make(fname)
 
-    def __init__(self, fname, cname=None):
-        cname = cname or fname
-        if not os.path.isfile(cname+'.py') or os.path.getmtime(cname+'.py') < os.path.getmtime(fname+'.js'):
-            js2py.translate_file(fname+'.js', cname+'.py')
-        module = __import__(cname, globals(), locals(), [None])
-        self._game = module.var.get(cname).get('default').to_python()
+    def __init__(self):
         self.set_opponent_policy(self._default_opponent_policy)
-        # game context
-        self._ctx = self._G = None
+        self._G = self._ctx = None
         self.reset()
         # stats
         self._counters = (0, 0)
-        # default policy = random
-        self._think = self._default_opponent_policy
 
     def __del__(self):
         if not self._counters[0]:
@@ -56,6 +50,11 @@ class GymEnv(gym.Env):
         else:
             tps = self._counters[1] / self._counters[0]
         self.log.debug('avg time per step: %.3fs', tps)
+
+    @property
+    def name(self):
+        """ Name of game. """
+        return self._game.name
 
     def _default_opponent_policy(self, G):
         return random.choice(self._game.enumerate(G))
@@ -65,11 +64,6 @@ class GymEnv(gym.Env):
         self._think = pol
 
     @property
-    def name(self):
-        """ Name of game. """
-        return self._game.name
-
-    @property
     def action_dim(self):
         """ Number of dimensions of action-space. """
         return self.action_space.n
@@ -77,7 +71,7 @@ class GymEnv(gym.Env):
     @property
     def action_space(self):
         """ Boundaries of action-space. """
-        space = self._game.action_space.to_list()
+        space = self._action_space_impl
         rv = spaces.Discrete(max(space)-min(space)+1)
         rv.low = min(space)
         rv.high = max(space)
@@ -86,14 +80,12 @@ class GymEnv(gym.Env):
     @property
     def observation_dim(self):
         """ Number of dimensions of observation-space. """
-        dims = self._game.observation_space.to_list()
-        assert len(dims) == 2
-        return dims[0]
+        return self.observation_space.shape[0]
 
     @property
     def observation_space(self):
         """ Boundaries of observation-space. """
-        dims = self._game.observation_space.to_list()
+        dims = self._observation_space_impl
         assert len(dims) == 2
         return spaces.Box(low=0, high=dims[1]-1, shape=(dims[0],), dtype=int)
 
@@ -101,7 +93,7 @@ class GymEnv(gym.Env):
         """ Reset environment to initial state. """
         self._ctx = self._game.flow.ctx(2)
         self._G = self._game.setup()
-        return np.asarray(self._game.observation(self._G).to_list())
+        return np.asarray(self._observation(self._G))
 
     def step(self, action):
         """ Perform step. """
@@ -127,8 +119,8 @@ class GymEnv(gym.Env):
             else:
                 self.log.debug('action not possible in current state: %d', action)
                 done = True
-                reward = -1
-            obs = np.asarray(self._game.observation(self._G).to_list())
+                reward = -10
+            obs = np.asarray(self._observation(self._G))
         except Exception as e:
             self.log.error("""internal exception in JS Game object:
             G=%s
@@ -140,3 +132,59 @@ class GymEnv(gym.Env):
         c = self._counters
         self._counters = (c[0] + 1, c[1] + time.time() - time0)
         return obs, float(reward), done, dict()
+
+
+class GymEnvPy(GymEnv):
+    """
+    Provide an OpenAI Gym environment around a Python3 Boardgame.io 'Game' object.
+    """
+    log = logging.getLogger('boardgameio.gymenvpy')
+
+    def __init__(self, fname, cname=None):
+        cname = cname or fname
+        module = __import__(fname, globals(), locals(), [])
+        self._game = getattr(module, cname)
+        GymEnv.__init__(self)
+
+    def reset(self):
+        """ Reset environment to initial state. """
+        self._G = self._game.setup()
+        self._ctx = namedtuple('Context', ['gameover'])(False)
+        return np.asarray(self._game.observation(self._G))
+
+    @property
+    def _action_space_impl(self):
+        return self._game.action_space
+
+    @property
+    def _observation_space_impl(self):
+        return self._game.observation_space
+
+    def _observation(self, G):
+        return self._game.observation(G)
+
+
+class GymEnvJs(GymEnv):
+    """
+    Provide an OpenAI Gym environment around a ES6 Boardgame.io 'Game' object.
+    """
+    log = logging.getLogger('boardgameio.gymenvjs')
+
+    def __init__(self, fname, cname=None):
+        cname = cname or fname
+        if not os.path.isfile(cname+'.py') or os.path.getmtime(cname+'.py') < os.path.getmtime(fname+'.js'):
+            js2py.translate_file(fname+'.js', cname+'.py')
+        module = __import__(cname, globals(), locals(), [None])
+        self._game = module.var.get(cname).get('default').to_python()
+        GymEnv.__init__(self)
+
+    @property
+    def _action_space_impl(self):
+        return self._game.action_space.to_list()
+
+    @property
+    def _observation_space_impl(self):
+        return self._game.observation_space.to_list()
+
+    def _observation(self, G):
+        return self._game.observation(G).to_list()

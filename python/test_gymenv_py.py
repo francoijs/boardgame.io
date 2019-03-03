@@ -15,10 +15,10 @@ from boardgameio import GymEnv
 logging.basicConfig(level=logging.ERROR)
 
 
-class TestGymEnv(unittest.TestCase):
+class TestGymEnvPy(unittest.TestCase):
 
     def setUp(self):
-        self.sut = GymEnv.make('bundle-tic-tac-toe', 'TicTacToe')
+        self.sut = GymEnv.make('tic-tac-toe.py', 'TicTacToe')
 
     def test_name_shall_return_name_of_game(self):
         self.assertEqual(self.sut.name, 'tic-tac-toe')
@@ -66,11 +66,11 @@ class TestGymEnv(unittest.TestCase):
         self.assertEqual(reward, 0.)
         self.assertEqual(done, False)
     
-    def test_step_shall_return_negative_reward_if_action_is_not_possible(self):
+    def test_step_shall_return_big_negative_reward_if_action_is_not_possible(self):
         state1, _, _, _ = self.sut.step(0)
         state2, reward, done, _ = self.sut.step(0)
         np.testing.assert_array_equal(state1, state2)
-        self.assertEqual(reward, -1)
+        self.assertEqual(reward, -10)
         self.assertEqual(done, True)
 
     @staticmethod
@@ -83,7 +83,7 @@ class TestGymEnv(unittest.TestCase):
         return policy
 
     def test_step_shall_set_reward_and_done_if_episode_has_ended(self):
-        self.sut.set_opponent_policy(TestGymEnv.make_policy([1,4]))
+        self.sut.set_opponent_policy(TestGymEnvPy.make_policy([1,4]))
         _, reward, done, _ = self.sut.step(0)
         self.assertEqual(reward, 0.)
         self.assertEqual(type(reward), float)
@@ -101,7 +101,7 @@ class TestGymEnv(unittest.TestCase):
         self.assertEqual(done, True)
 
     def test_step_shall_return_negative_reward_if_game_was_lost(self):
-        self.sut.set_opponent_policy(TestGymEnv.make_policy([1,4,7]))
+        self.sut.set_opponent_policy(TestGymEnvPy.make_policy([1,4,7]))
         self.sut.step(0)
         self.sut.step(3)
         state, reward, done, _ = self.sut.step(5)
@@ -113,7 +113,7 @@ class TestGymEnv(unittest.TestCase):
         self.assertEqual(done, True)
 
     def test_step_shall_return_negative_reward_if_game_was_draw(self):
-        self.sut.set_opponent_policy(TestGymEnv.make_policy([1,4,6,8]))
+        self.sut.set_opponent_policy(TestGymEnvPy.make_policy([1,4,6,8]))
         self.sut.step(0)
         self.sut.step(2)
         self.sut.step(3)
