@@ -17,7 +17,7 @@ import unittest
 import logging
 import mock
 import socketIO_client_nexus as io
-from boardgameio import Namespace, Bot
+from boardgameio.bot import Namespace, Bot
 
 logging.basicConfig(level=logging.ERROR)
 
