@@ -43,6 +43,9 @@ export function GameEnv({
       observation: G => {
         return make_observation(game.playerView(G));
       },
+      action: A => {
+        return make_action(A);
+      },
 
       step: (G, ctx, A, playerID) => {
         let state = { G: G, ctx: ctx };

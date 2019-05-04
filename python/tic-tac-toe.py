@@ -1,4 +1,4 @@
-
+import numpy as np
 from collections import namedtuple
 
 State = namedtuple('State', ['G', 'ctx'])
@@ -8,15 +8,19 @@ Context = namedtuple('Context', ['gameover'])
 class TicTacToe:
 
     def setup():
-        return [None]*9
+        return {'cells': [None]*9}
 
     def observation(G):
-        return list(map(lambda c: 0 if c is None else int(c)+1, G))
+        return np.array(list(map(lambda c: 0 if c is None else int(c)+1, G['cells'])))
+
+    def action(A):
+        return 'clickCell', A
 
     def enumerate(G):
+        cells = G['cells']
         r = []
-        for i in range(len(G)):
-            if G[i] is None:
+        for i in range(len(cells)):
+            if cells[i] is None:
                 r.append(i)
         return r
     
@@ -32,11 +36,12 @@ class TicTacToe:
     ]
 
     def is_victory(G):
+        cells = G['cells']
         for pos in TicTacToe.positions:
-            symbol = G[pos[0]]
+            symbol = cells[pos[0]]
             winner = symbol
             for i in pos:
-                if G[i] != symbol:
+                if cells[i] != symbol:
                     winner = None
                     break
             if winner != None:
@@ -45,10 +50,11 @@ class TicTacToe:
         
     
     def step(G, ctx, action, playerID):
-        G[action] = playerID
+        cells = G['cells']
+        cells[action] = playerID
         if TicTacToe.is_victory(G):
             ctx = Context(GameOver(playerID, False))
-        if None not in G:
+        if None not in cells:
             ctx = Context(GameOver(None, True))
         return State(G, ctx)
         

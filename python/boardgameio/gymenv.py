@@ -38,11 +38,11 @@ class GymEnv(gym.Env):
         return gym.make(fname)
 
     def __init__(self):
+        # stats
+        self._counters = (0, 0)
         self.set_opponent_policy(self._default_opponent_policy)
         self._G = self._ctx = None
         self.reset()
-        # stats
-        self._counters = (0, 0)
 
     def __del__(self):
         if not self._counters[0]:
@@ -162,6 +162,9 @@ class GymEnvPy(GymEnv):
 
     def _observation(self, G):
         return self._game.observation(G)
+
+    def _action(self, A):
+        return self._game.action(A)
 
 
 class GymEnvJs(GymEnv):
